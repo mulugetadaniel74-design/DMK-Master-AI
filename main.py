@@ -1,53 +1,50 @@
 import telebot
-import requests
-from groq import Groq
+import google.generativeai as genai
 import time
 
-# ቁልፎች (እንዳይሳሳቱ አረጋግጥ)
+# --- መለያ ቁጥሮች ---
 BOT_TOKEN = "8308148615:AAHBvWtd8ondkVQiebRxHADRa2KCB5b1wPg"
-GROQ_API_KEY = "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"
+GEMINI_API_KEY = "AIzaSyDZafdaUpR5SJDFBi4DBbC72q_GwCk5P-c"
+
+# ጄሚኒን ማዘጋጀት
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 bot = telebot.TeleBot(BOT_TOKEN)
-client = Groq(api_key=GROQ_API_KEY)
 
-# ግጭትን ለመከላከል
+# ግጭትን ለመከላከል የድሮ ግንኙነትን ማጽዳት
 try:
     bot.remove_webhook()
     time.sleep(1)
 except:
     pass
 
-# ቦቱ እንዲከተለው የምንፈልገው ዋናው መመሪያ
+# የቦቱ መመሪያ
 SYSTEM_PROMPT = """
 አንተ 'DMK Master AI' የዳንኤል ሙሉጌታ ኩምሳ (Daniel Mulugeta Kumsa) ዲጂታል ረዳት ነህ። 
-የዳንኤል ዋና መርህ 'ሰብአዊነት ይቅደም' (Humanity First) ነው።
-መመሪያዎች፦
-1. ሁልጊዜ በአጭሩ፣ በግልጽ እና በታማኝነት መልስ ስጥ።
-2. ተጠቃሚው በሚያናግርህ ቋንቋ (አማርኛ፣ ኦሮሚኛ ወይም እንግሊዝኛ) ተጠቀም።
-3. ስለ ዳንኤል ከተጠየቅክ እሱ አርቲፊሻል ኢንተለጀንስ የሚያበለጽግ ፈላስፋ መሆኑን ንገር።
-4. ዝም ብለህ የማይገናኙ ቃላትን ወይም ቁጥሮችን አትደርድር።
+ዳንኤል አዲስ አበባ የሚኖር ፈላስፋ እና የሶፍትዌር ደቨሎፐር ነው። 
+መርሁ 'ሰብአዊነት ይቅደም' (Humanity First) ነው።
+መመሪያ፦ 
+- በማንኛውም ቋንቋ (በተለይ በአማርኛ) ግልጽ እና ትክክለኛ መልስ ስጥ። 
+- አጭር እና አጋዥ ሁን። 
+- ፈጽሞ ዝባዝንኬ ወይም የማይገናኙ ቁጥሮችን አትደርድር።
 """
 
 @bot.message_handler(func=lambda message: True)
-def handle_messages(message):
+def handle_message(message):
     try:
         bot.send_chat_action(message.chat.id, 'typing')
         
-        # ለ AI ጥያቄውን መላክ
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": message.text}
-            ],
-            temperature=0.7 # መልሱ የተረጋጋ እንዲሆን ያደርጋል
-        )
+        # ለጄሚኒ ጥያቄውን መላክ
+        prompt = f"{SYSTEM_PROMPT}\n\nተጠቃሚው እንዲህ ብሏል፦ {message.text}"
+        response = model.generate_content(prompt)
         
-        bot.reply_to(message, completion.choices[0].message.content)
+        bot.reply_to(message, response.text)
     except Exception as e:
         print(f"Error: {e}")
+        bot.reply_to(message, "ይቅርታ፣ ትንሽ ችግር አጋጥሞኛል። እባክህ ቆይተህ ሞክር።")
 
 if __name__ == "__main__":
-    print("ቦቱ በአዲስ መመሪያ ስራ ጀምሯል...")
+    print("ቦቱ በጄሚኒ ሞተር ስራ ጀምሯል!")
     bot.infinity_polling(skip_pending=True)
     
