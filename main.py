@@ -1,16 +1,43 @@
 import telebot
 import google.generativeai as genai
+import time
 
-bot = telebot.TeleBot("8308148615:AAHBvWtd8ondkVQiebRxHADRa2KCB5b1wPg")
-genai.configure(api_key="AIzaSyDZafdaUpR5SJDFBi4DBbC72q_GwCk5P-c")
+# ቁልፎች
+BOT_TOKEN = "8308148615:AAHBvWtd8ondkVQiebRxHADRa2KCB5b1wPg"
+GEMINI_API_KEY = "AIzaSyDZafdaUpR5SJDFBi4DBbC72q_GwCk5P-c"
+
+genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
+bot = telebot.TeleBot(BOT_TOKEN)
+
+# አሮጌ ግንኙነትን ማጽዳት
+try:
+    bot.remove_webhook()
+    time.sleep(1)
+except:
+    pass
+
+# ዋናው መመሪያ (Instruction)
+SYSTEM_INSTRUCTION = (
+    "አንተ 'DMK Master AI' የዳንኤል ሙሉጌታ ኩምሳ (Daniel Mulugeta Kumsa) ረዳት ነህ። "
+    "ዳንኤል አዲስ አበባ የሚኖር ፈላስፋ እና የሶፍትዌር ደቨሎፐር ነው። "
+    "መርሁ 'ሰብአዊነት ይቅደም' (Humanity First) ነው። "
+    "ጥያቄ ሲቀርብልህ ሁልጊዜ ዳንኤልን ወክለህ በአጭር አማርኛ መልስ ስጥ።"
+)
+
 @bot.message_handler(func=lambda message: True)
-def echo_all(message):
+def handle_msg(message):
     try:
-        response = model.generate_content(message.text)
+        bot.send_chat_action(message.chat.id, 'typing')
+        # መመሪያውን እና ጥያቄውን አቀላቅሎ መላክ
+        full_query = f"{SYSTEM_INSTRUCTION}\n\nተጠቃሚው እንዲህ ብሏል፦ {message.text}"
+        response = model.generate_content(full_query)
         bot.reply_to(message, response.text)
     except Exception as e:
-        bot.reply_to(message, f"ስህተት ተፈጥሯል፡ {e}")
+        print(f"Error: {e}")
+        bot.reply_to(message, "እባክህ ድጋሚ ሞክር።")
 
-bot.infinity_polling()
+if __name__ == "__main__":
+    bot.infinity_polling(skip_pending=True)
+    
