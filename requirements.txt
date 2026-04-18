@@ -1,3 +1,2 @@
 pyTelegramBotAPI
-groq
-requests
+google-generativeai
