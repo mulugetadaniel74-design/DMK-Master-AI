@@ -1,25 +1,48 @@
-import telebot
 import os
-from google import generativeai as genai
+import telebot
+from groq import Groq
+from dotenv import load_dotenv
 
-# ቁልፎቹን ከ Render Environment Variables ላይ ያነባል
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# .env ፋይል ውስጥ ያሉትን መረጃዎች ለመጫን
+load_dotenv()
 
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# ቁልፎችን ከ Environment Variables ላይ ማንበብ
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+
+# ቦቱን እና Groqን ማስጀመር
 bot = telebot.TeleBot(BOT_TOKEN)
+client = Groq(api_key=GROQ_API_KEY)
 
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    bot.reply_to(message, "ሰላም ዳንኤል! አሁን ቦቱ በደህንነት እየሰራ ነው።")
-
-@bot.message_handler(func=lambda message: True)
-def handle_message(message):
+# ለተጠቃሚው መልስ የሚሰጥ ፋንክሽን
+def get_ai_response(prompt):
     try:
-        response = model.generate_content(message.text)
-        bot.reply_to(message, response.text)
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "አንተ ጎበዝ ረዳት ነህ።"},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return completion.choices[0].message.content
     except Exception as e:
-        bot.reply_to(message, "ይቅርታ፣ ጌሚኒን ማግኘት አልቻልኩም።")
+        return f"ይቅርታ፣ ችግር ተከስቷል፦ {e}"
 
-bot.infinity_polling()
+# መልእክት ሲመጣ የሚሰራው ክፍል
+@bot.message_handler(func=lambda message: True)
+def handle_all_messages(message):
+    user_input = message.text
+    # ለተጠቃሚው "በማሰብ ላይ ነኝ..." የሚል ምልክት ለማሳየት
+    bot.send_chat_action(message.chat.id, 'typing')
+    
+    # የAI መልሱን ማግኘት
+    response = get_ai_response(user_input)
+    
+    # መልሱን ለተጠቃሚው መላክ
+    bot.reply_to(message, response)
+
+# ቦቱን ማስነሳት
+if __name__ == "__main__":
+    print("ቦቱ እየሰራ ነው...")
+    bot.infinity_polling()
+    
