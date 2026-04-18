@@ -1,49 +1,82 @@
 import telebot
+import requests
 from groq import Groq
+import os
 
-# 1. መለያ ቁጥሮች (እነዚህን እንዳትቀይራቸው)
+# 1. መለያ ቁጥሮች
 BOT_TOKEN = "8308148615:AAEmQF9X5Em8Kf7nOFPo1oOzJULjCnttmRI"
 GROQ_API_KEY = "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"
 
-# 2. ቦቱን እና AI ሞዴሉን ማገናኘት
 bot = telebot.TeleBot(BOT_TOKEN)
 client = Groq(api_key=GROQ_API_KEY)
 
-# 3. ለ AI የሚሰጥ መመሪያ (ለሁሉም ቋንቋ እና ለማንነት)
-SYSTEM_PROMPT = """
-አንተ 'DMK Master AI' የተባልክ የዳንኤል ሙሉጌታ ኩምሳ (Daniel Mulugeta Kumsa) ዲጂታል ረዳት ነህ። 
-የዳንኤልን ፍልስፍናዎች፣ በተለይም 'ሰብአዊነት ይቅደም' (Humanity First) የሚለውን መርህ ታንጸባርቃለህ።
-ደንቦች፦
-1. ተጠቃሚው በሚያናግርህ በማንኛውም ቋንቋ መልስ ስጥ (አማርኛ፣ ኦሮሚኛ፣ እንግሊዝኛ ወዘተ)።
-2. ንግግርህ ትሁት፣ ጥልቀት ያለው እና አጋዥ ይሁን።
-3. ስለ ራስህ ማንነት ከተጠየቅክ የዳንኤል (DMK) ረዳት መሆንህን ንገራቸው።
-"""
+SYSTEM_PROMPT = "አንተ 'DMK Master AI' የዳንኤል ረዳት ነህ። በማንኛውም ቋንቋ መልስ ስጥ። ሰብአዊነት ይቅደም!"
 
-def get_ai_response(user_text):
+# --- 2. ለጽሁፍ መልእክት ---
+@bot.message_handler(func=lambda message: True, content_types=['text'])
+def handle_text(message):
+    bot.send_chat_action(message.chat.id, 'typing')
     try:
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
+            messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": message.text}]
+        )
+        bot.reply_to(message, completion.choices[0].message.content)
+    except Exception as e:
+        bot.reply_to(message, f"ስህተት፦ {e}")
+
+# --- 3. ለፎቶ (Vision) ---
+@bot.message_handler(content_types=['photo'])
+def handle_photo(message):
+    bot.reply_to(message, "ፎቶውን እያየሁት ነው፣ ጥቂት ታገሰኝ...")
+    try:
+        file_info = bot.get_file(message.photo[-1].file_id)
+        image_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
+        
+        completion = client.chat.completions.create(
+            model="llama-3.2-11b-vision-preview",
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_text}
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "ይህ ፎቶ ምን እንደሆነ በአማርኛ ወይም ተጠቃሚው በፈለገው ቋንቋ አብራራ።"},
+                        {"type": "image_url", "image_url": {"url": image_url}}
+                    ]
+                }
             ]
         )
-        return completion.choices[0].message.content
+        bot.reply_to(message, completion.choices[0].message.content)
     except Exception as e:
-        return f"ይቅርታ ስህተት ተከስቷል፦ {e}"
+        bot.reply_to(message, f"ፎቶውን ማንበብ አልቻልኩም፦ {e}")
 
-# 4. መልእክት ሲመጣ የሚሰራው ክፍል
-@bot.message_handler(func=lambda message: True)
-def handle_message(message):
-    # ቦቱ "እየጻፈ ነው..." የሚል ምልክት እንዲያሳይ
-    bot.send_chat_action(message.chat.id, 'typing')
-    
-    # መልሱን አምጥቶ መላክ
-    response = get_ai_response(message.text)
-    bot.reply_to(message, response)
+# --- 4. ለድምጽ (Voice to Text) ---
+@bot.message_handler(content_types=['voice'])
+def handle_voice(message):
+    bot.reply_to(message, "ድምጽህን እየሰማሁት ነው...")
+    try:
+        file_info = bot.get_file(message.voice.file_id)
+        file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
+        audio_data = requests.get(file_url).content
+        
+        with open("voice.ogg", "wb") as f:
+            f.write(audio_data)
+        
+        with open("voice.ogg", "rb") as audio_file:
+            transcription = client.audio.transcriptions.create(
+                file=("voice.ogg", audio_file.read()),
+                model="whisper-large-v3",
+                response_format="text"
+            )
+        
+        # ድምጹን ወደ AI ልኮ መልስ ማምጣት
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": transcription}]
+        )
+        bot.reply_to(message, f"የሰማሁት፡ {transcription}\n\nምላሽ፡ {completion.choices[0].message.content}")
+    except Exception as e:
+        bot.reply_to(message, f"ድምጽህን መረዳት አልቻልኩም፦ {e}")
 
-# 5. ቦቱን ማስነሳት
 if __name__ == "__main__":
-    print("DMK Master AI አሁን ዝግጁ ነው!")
     bot.infinity_polling()
     
