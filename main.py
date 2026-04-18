@@ -2,7 +2,7 @@ import telebot
 from groq import Groq
 
 # 1. አዲሱ የቴሌግራም ቶክን እና የGroq ቁልፍ
-BOT_TOKEN = "8308148615:AAEY4op7m6fDY6QrlamBlbQG6rdMM1zN0ZI"
+BOT_TOKEN = "8308148615:AAEmQF9X5Em8Kf7nOFPo1oOzJULjCnttmRI"
 GROQ_API_KEY = "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"
 
 # 2. ቦቱን እና Groqን ማስጀመር
@@ -17,22 +17,19 @@ def get_ai_response(user_text):
             messages=[
                 {
                     "role": "system", 
-                    "content": "አንተ 'DMK Master AI' የተባልክ የዳንኤል ረዳት ነህ። ሁልጊዜ በአማርኛ ጥልቀት ያለው መልስ ስጥ።"
+                    "content": "አንተ 'DMK Master AI' የተባልክ የዳንኤል ረዳት ነህ። ሁልጊዜ በአማርኛ ጥልቀት ያለው እና ግልጽ መልስ ስጥ።"
                 },
                 {"role": "user", "content": user_text}
             ]
         )
         return completion.choices[0].message.content
     except Exception as e:
-        return f"ይቅርታ ዳንኤል፣ ትንሽ ስህተት አጋጥሞኛል፦ {e}"
+        return f"ይቅርታ ዳንኤል፣ የAI ስህተት ተከስቷል፦ {e}"
 
 # 4. መልእክት ሲመጣ የሚሰራው ክፍል
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
-    # ቦቱ "እየጻፈ ነው..." የሚል ምልክት እንዲያሳይ
     bot.send_chat_action(message.chat.id, 'typing')
-    
-    # መልሱን ከGroq AI አምጥቶ መላክ
     response = get_ai_response(message.text)
     bot.reply_to(message, response)
 
@@ -40,4 +37,4 @@ def handle_message(message):
 if __name__ == "__main__":
     print("ቦቱ በተሳካ ሁኔታ ተነስቷል!")
     bot.infinity_polling()
-    ሥሥ
+    
