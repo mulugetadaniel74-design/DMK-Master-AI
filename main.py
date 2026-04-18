@@ -1,40 +1,25 @@
+import os
 import telebot
 from groq import Groq
 
-# 1. አዲሱ የቴሌግራም ቶክን እና የGroq ቁልፍ
-BOT_TOKEN = "8308148615:AAEmQF9X5Em8Kf7nOFPo1oOzJULjCnttmRI"
-GROQ_API_KEY = "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"
+# መረጃዎቹን ከ Render Environment ነው የሚያነበው
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
-# 2. ቦቱን እና Groqን ማስጀመር
 bot = telebot.TeleBot(BOT_TOKEN)
 client = Groq(api_key=GROQ_API_KEY)
 
-# 3. ከGroq AI መልስ የሚያመጣ ፋንክሽን
-def get_ai_response(user_text):
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
     try:
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[
-                {
-                    "role": "system", 
-                    "content": "አንተ 'DMK Master AI' የተባልክ የዳንኤል ረዳት ነህ። ሁልጊዜ በአማርኛ ጥልቀት ያለው እና ግልጽ መልስ ስጥ።"
-                },
-                {"role": "user", "content": user_text}
-            ]
+            messages=[{"role": "user", "content": message.text}]
         )
-        return completion.choices[0].message.content
+        bot.reply_to(message, completion.choices[0].message.content)
     except Exception as e:
-        return f"ይቅርታ ዳንኤል፣ የAI ስህተት ተከስቷል፦ {e}"
+        bot.reply_to(message, f"Error: {e}")
 
-# 4. መልእክት ሲመጣ የሚሰራው ክፍል
-@bot.message_handler(func=lambda message: True)
-def handle_message(message):
-    bot.send_chat_action(message.chat.id, 'typing')
-    response = get_ai_response(message.text)
-    bot.reply_to(message, response)
-
-# 5. ቦቱን ማስነሳት
 if __name__ == "__main__":
-    print("ቦቱ በተሳካ ሁኔታ ተነስቷል!")
     bot.infinity_polling()
-    
+    ልክፈት ሥ
