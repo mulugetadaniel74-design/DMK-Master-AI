@@ -3,46 +3,47 @@ import telebot
 from groq import Groq
 from dotenv import load_dotenv
 
-# .env ፋይል ውስጥ ያሉትን መረጃዎች ለመጫን
+# 1. Environment Variables መጫን (ለአካባቢው ፋይል)
 load_dotenv()
 
-# ቁልፎችን ከ Environment Variables ላይ ማንበብ
+# 2. ቁልፎችን ከ Render Environment Variables ማግኘት
+# Render ላይ BOT_TOKEN እና GROQ_API_KEY ብለህ መመዝገብህን አረጋግጥ
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
-# ቦቱን እና Groqን ማስጀመር
+# 3. ቦቱን እና Groqን ማስጀመር
 bot = telebot.TeleBot(BOT_TOKEN)
 client = Groq(api_key=GROQ_API_KEY)
 
-# ለተጠቃሚው መልስ የሚሰጥ ፋንክሽን
-def get_ai_response(prompt):
+# 4. ከGroq AI መልስ የሚያመጣ ፋንክሽን
+def get_ai_response(user_text):
     try:
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "አንተ ጎበዝ ረዳት ነህ።"},
-                {"role": "user", "content": prompt}
+                {
+                    "role": "system", 
+                    "content": "አንተ 'DMK Master AI' የተባልክ የዳንኤል ረዳት ነህ። ሁልጊዜ በአማርኛ ጥልቀት ያለው እና ግልጽ መልስ ስጥ።"
+                },
+                {"role": "user", "content": user_text}
             ]
         )
         return completion.choices[0].message.content
     except Exception as e:
-        return f"ይቅርታ፣ ችግር ተከስቷል፦ {e}"
+        return f"ይቅርታ ዳንኤል፣ የAI ስህተት ተከስቷል፦ {e}"
 
-# መልእክት ሲመጣ የሚሰራው ክፍል
+# 5. መልእክት ሲመጣ የሚሰራው ክፍል
 @bot.message_handler(func=lambda message: True)
-def handle_all_messages(message):
-    user_input = message.text
-    # ለተጠቃሚው "በማሰብ ላይ ነኝ..." የሚል ምልክት ለማሳየት
+def handle_message(message):
+    # ቦቱ "እየጻፈ ነው..." የሚል ምልክት እንዲያሳይ
     bot.send_chat_action(message.chat.id, 'typing')
     
-    # የAI መልሱን ማግኘት
-    response = get_ai_response(user_input)
-    
-    # መልሱን ለተጠቃሚው መላክ
+    # መልሱን ከGroq AI አምጥቶ መላክ
+    response = get_ai_response(message.text)
     bot.reply_to(message, response)
 
-# ቦቱን ማስነሳት
+# 6. ቦቱን ማስነሳት
 if __name__ == "__main__":
-    print("ቦቱ እየሰራ ነው...")
+    print("ቦቱ በተሳካ ሁኔታ ተነስቷል!")
     bot.infinity_polling()
     
