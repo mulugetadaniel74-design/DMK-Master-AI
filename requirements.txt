@@ -1,2 +1,3 @@
+groq
 pyTelegramBotAPI
-google-generativeai
+python-dotenv
