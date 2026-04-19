@@ -4,30 +4,25 @@ import time
 
 # --- መለያዎች ---
 BOT_TOKEN = "8308148615:AAHBvWtd8ondkVQiebRxHADRa2KCB5b1wPg"
-# እዚህ ጋር 'G' የነበረችውን ወደ 'g' ቀይሬያታለሁ
 GROQ_API_KEY = "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"
 
 client = Groq(api_key=GROQ_API_KEY)
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# ግጭትን (Conflict) ለመፍታት የቀድሞ ግንኙነትን ማጽዳት
+# 1. 'Conflict' ለመፍታት የቆየ ግንኙነትን በሃይል ማጽዳት
+print("የቆየ ግንኙነትን በማጽዳት ላይ...")
 try:
     bot.remove_webhook()
-    time.sleep(2)
+    time.sleep(3) # ቦቱ እንዲረጋጋ 3 ሰከንድ መስጠት
 except:
     pass
 
-SYSTEM_INSTRUCTION = """
-አንተ 'DMK Master AI' የዳንኤል ሙሉጌታ ኩምሳ ረዳት ነህ። 
-የዳንኤል መርህ 'ሰብአዊነት ይቅደም' ነው። 
-ሁልጊዜ በአጭር አማርኛ ብቻ መልስ ስጥ።
-"""
+SYSTEM_INSTRUCTION = "አንተ 'DMK Master AI' የዳንኤል ረዳት ነህ። በአጭር አማርኛ መልስ ስጥ። ሰብአዊነት ይቅደም!"
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     try:
         bot.send_chat_action(message.chat.id, 'typing')
-        
         chat_completion = client.chat.completions.create(
             messages=[
                 {"role": "system", "content": SYSTEM_INSTRUCTION},
@@ -35,15 +30,12 @@ def handle_message(message):
             ],
             model="llama3-8b-8192",
         )
-        
         bot.reply_to(message, chat_completion.choices[0].message.content)
     except Exception as e:
-        error_msg = str(e)
-        print(f"Error: {error_msg}")
-        # ስህተት ካለ ለዳንኤል እንዲነግረው
-        bot.reply_to(message, f"ችግር ተፈጥሯል፦ {error_msg}")
+        print(f"Error: {e}")
 
 if __name__ == "__main__":
     print("DMK Master AI ስራ ጀምሯል...")
+    # 2. skip_pending=True የቀድሞ መልእክቶችን እንዳያነብ ያደርጋል
     bot.infinity_polling(skip_pending=True)
     
