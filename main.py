@@ -1,30 +1,29 @@
 import telebot
-import google.generativeai as genai
+from openai import OpenAI
 import time
 
 # --- መለያዎች ---
 BOT_TOKEN = "8308148615:AAHBvWtd8ondkVQiebRxHADRa2KCB5b1wPg"
-GEMINI_API_KEY = "AIzaSyDZafdaUpR5SJDFBi4DBbC72q_GwCk5P-c"
+DEEPSEEK_API_KEY = "sk-47dd040f7da543df8ff2ff64cdc24d32"
 
-# የጄሚኒ ኮንፊገሬሽን - እዚህ ጋር ስሙን አስተካክለነዋል
-genai.configure(api_key=GEMINI_API_KEY)
-# 'gemini-1.5-flash-latest' በጣም አስተማማኙ ስም ነው
-model = genai.GenerativeModel('gemini-1.5-flash-latest')
+# DeepSeek ዝግጅት
+client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# የድሮ ግንኙነትን ማጽዳት
+# ግጭትን ለመከላከል
 try:
     bot.remove_webhook()
     time.sleep(1)
 except:
     pass
 
-# የቦቱ መመሪያ
+# ያንተ ማንነት መመሪያ
 SYSTEM_INSTRUCTION = """
-አንተ 'DMK Master AI' የዳንኤል ሙሉጌታ ኩምሳ ረዳት ነህ። 
-የዳንኤል መርህ 'ሰብአዊነት ይቅደም' ነው። 
-በአጭር አማርኛ ብቻ መልስ ስጥ።
+አንተ 'DMK Master AI' የዳንኤል ሙሉጌታ ኩምሳ (Daniel Mulugeta Kumsa) ረዳት ነህ። 
+ዳንኤል አዲስ አበባ የሚኖር ፈላስፋ እና የሶፍትዌር ደቨሎፐር ነው። 
+መርሁ 'ሰብአዊነት ይቅደም' (Humanity First) ነው። 
+ሁልጊዜ በአጭር እና ግልጽ አማርኛ መልስ ስጥ።
 """
 
 @bot.message_handler(func=lambda message: True)
@@ -32,20 +31,22 @@ def handle_message(message):
     try:
         bot.send_chat_action(message.chat.id, 'typing')
         
-        # ለጄሚኒ ጥያቄውን መላክ
-        response = model.generate_content(f"{SYSTEM_INSTRUCTION}\n\nጥያቄ፡ {message.text}")
+        # ለዲፕሲክ ጥያቄውን መላክ
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": SYSTEM_INSTRUCTION},
+                {"role": "user", "content": message.text},
+            ],
+            stream=False
+        )
         
-        if response.text:
-            bot.reply_to(message, response.text)
-        else:
-            bot.reply_to(message, "ይቅርታ፣ መልስ ማመንጨት አልቻልኩም።")
-            
+        bot.reply_to(message, response.choices[0].message.content)
     except Exception as e:
         print(f"Error: {e}")
-        # ስህተቱ ከቀጠለ ለዳንኤል ይነግረዋል
-        bot.reply_to(message, f"የቴክኒክ ስህተት፡ {e}")
+        bot.reply_to(message, "ይቅርታ ዳንኤል፣ ትንሽ የቴክኒክ ችግር አጋጥሞኛል።")
 
 if __name__ == "__main__":
-    print("DMK Master AI ስራ ጀምሯል...")
+    print("ቦቱ በ DeepSeek ስራ ጀምሯል!")
     bot.infinity_polling(skip_pending=True)
     
