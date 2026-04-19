@@ -4,7 +4,8 @@ import time
 
 # --- መለያዎች ---
 BOT_TOKEN = "8308148615:AAHBvWtd8ondkVQiebRxHADRa2KCB5b1wPg"
-GROQ_API_KEY = "Gsk_kslAB7OFxDQVWu9ocfkhWGdyb3FYbfmh6XPGsztysdsWCfAJunIi"
+# አዲሱ የግሩክ ቁልፍህ
+GROQ_API_KEY = "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"
 
 # Groq ዝግጅት
 client = Groq(api_key=GROQ_API_KEY)
@@ -30,18 +31,19 @@ def handle_message(message):
     try:
         bot.send_chat_action(message.chat.id, 'typing')
         
-        # ለግሩክ ጥያቄውን መላክ (llama-3.3-70b በጣም ብልህ ሞዴል ነው)
+        # ለግሩክ ጥያቄውን መላክ (llama-3.3-70b-versatile በጣም ብልህ ሞዴል ነው)
         chat_completion = client.chat.completions.create(
             messages=[
                 {"role": "system", "content": SYSTEM_INSTRUCTION},
                 {"role": "user", "content": message.text},
             ],
-            model="llama-3.3-70b-specdec",
+            model="llama-3.3-70b-versatile",
         )
         
         bot.reply_to(message, chat_completion.choices[0].message.content)
     except Exception as e:
         print(f"Error: {e}")
+        # ስህተት ቢኖር እንኳ ምን እንደሆነ በግልጽ ይነግርሃል
         bot.reply_to(message, f"ችግር ተፈጥሯል፦ {str(e)}")
 
 if __name__ == "__main__":
